@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1️⃣ Récupérer le code
+    # 1️⃣ Checkout du code
     - uses: actions/checkout@v2
 
     # 2️⃣ Installer Python
@@ -20,7 +20,7 @@ jobs:
       with:
         python-version: '3.9'
 
-    # 3️⃣ Installer les dépendances Python
+    # 3️⃣ Installer les dépendances
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -35,8 +35,8 @@ jobs:
       run: |
         pip install bandit jq
         bandit -r . -f json -o bandit_report.json || true
-        if jq '.results[] | select(.issue_severity == "HIGH" or .issue_severity == "CRITICAL")' bandit_report.json | grep -q .; then
-          echo "Vulnérabilités critiques détectées ! Pipeline échoue."
+        if jq '.results[] | select(.issue_severity=="HIGH" or .issue_severity=="CRITICAL")' bandit_report.json | grep -q .; then
+          echo "Vulnérabilités critiques détectées par Bandit ! Pipeline échoue."
           exit 1
         fi
 
@@ -53,7 +53,7 @@ jobs:
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-    # 7️⃣ Déployer l'application éphémère en Docker
+    # 7️⃣ Déployer l'application Python en Docker
     - name: Deploy ephemeral environment
       run: |
         docker build -t mon-app .
@@ -62,18 +62,30 @@ jobs:
         timeout 60 bash -c "until curl -s http://localhost:8000; do sleep 1; done" || echo "Server failed to start"
         docker logs app
 
-    # 8️⃣ Scanner l'application avec OWASP ZAP (DAST)
+    # 8️⃣ Créer dossier pour les rapports ZAP
+    - name: Create ZAP reports folder
+      run: mkdir -p zap-reports
+
+    # 9️⃣ Scanner l'application avec OWASP ZAP (DAST)
     - name: Run DAST with OWASP ZAP
       run: |
-        # Pull l'image ZAP officielle depuis GitHub Container Registry
         docker pull ghcr.io/zaproxy/zaproxy:stable
-        
-        # Lancer le scan basique
-        docker run --network host ghcr.io/zaproxy/zaproxy:stable \
-            zap-baseline.py \
-            -t http://localhost:8000 \
-            -r zap_report.html \
-            -l FAIL
 
-        # Stopper l'application après le scan
+        docker run --rm --network host \
+          -v $PWD/zap-reports:/zap/wrk \
+          ghcr.io/zaproxy/zaproxy:stable \
+          zap-baseline.py \
+          -t http://localhost:8000 \
+          -r /zap/wrk/zap_report.html \
+          -J /zap/wrk/zap_report.json \
+          -l FAIL
+
         docker stop app
+
+    # 🔟 Échouer la pipeline si ZAP trouve des vulnérabilités HIGH/CRITICAL
+    - name: Fail if ZAP finds HIGH/CRITICAL
+      run: |
+        if jq '.site[].alerts[] | select(.risk=="High" or .risk=="Critical")' zap-reports/zap_report.json | grep -q .; then
+          echo "Vulnérabilités HIGH/CRITICAL détectées par ZAP ! Pipeline échoue."
+          exit 1
+        fi
