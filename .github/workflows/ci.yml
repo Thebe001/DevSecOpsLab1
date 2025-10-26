@@ -26,3 +26,19 @@ jobs:
     - name: Run unit tests
       run: |
         python -m unittest test_app.py
+
+    - name: Run SAST with Bandit
+      run: |
+        pip install bandit
+        bandit -r . -f json -o bandit_report.json || true
+        if jq '.results[] | select(.issue_severity == "HIGH" or .issue_severity == "CRITICAL")' bandit_report.json | grep -q .; then
+          echo "Vulnérabilités critiques détectées ! Pipeline échoue."
+          exit 1
+        fi
+
+    - name: Run SCA with Snyk
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      run: |
+        curl -sL https://raw.githubusercontent.com/snyk/snyk/master/scripts/install-snyk.sh | bash
+        snyk test --severity-threshold=high --fail-on=upgradable || true
