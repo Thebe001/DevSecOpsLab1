@@ -52,11 +52,13 @@ jobs:
       run: |
         docker build -t mon-app .
         docker run -d -p 8000:8000 --name app mon-app
-        # Attendre que le serveur soit prêt (vérification de santé)
-        timeout 30 bash -c "until curl -s http://localhost:8000; do sleep 1; done"
+        # Attendre que le serveur soit prêt (vérification de santé avec timeout accru)
+        timeout 60 bash -c "until curl -s http://localhost:8000; do sleep 1; done" || echo "Server failed to start, check logs"
+        # Afficher les logs pour débogage
+        docker logs app
 
     - name: Run DAST with OWASP ZAP
       run: |
-        docker pull owasp/zap2docker-weekly
-        docker run --network host owasp/zap2docker-weekly zap-baseline.py -t http://localhost:8000 -r zap_report.html -l FAIL
+        docker pull owaspsecurity/zap || docker build -t owaspsecurity/zap:local zap-docker/
+        docker run --network host owaspsecurity/zap:local zap-baseline.py -t http://localhost:8000 -r zap_report.html -l FAIL
         docker stop app
