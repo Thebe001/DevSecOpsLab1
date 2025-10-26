@@ -36,13 +36,9 @@ class CustomHandler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     try:
-        user_input = input("Commande (ou vide pour serveur) : ")
-        if user_input:
-            safe_function(user_input)
-        else:
-            server_address = ('0.0.0.0', 8000)
-            httpd = HTTPServer(server_address, CustomHandler)
-            print("Serveur sur http://localhost:8000")
-            httpd.serve_forever()
+        server_address = ('0.0.0.0', 8000)
+        httpd = HTTPServer(server_address, CustomHandler)
+        print("Serveur démarré sur http://0.0.0.0:8000")
+        httpd.serve_forever()
     except KeyboardInterrupt:
         httpd.server_close()
