@@ -64,14 +64,14 @@ jobs:
 
     # 8️⃣ Créer dossier pour les rapports ZAP
     - name: Create ZAP reports folder
-      run: mkdir -p zap-reports
+      run: mkdir -p zap-reports && chmod -R 777 zap-reports
 
     # 9️⃣ Scanner l'application avec OWASP ZAP (DAST)
     - name: Run DAST with OWASP ZAP
       run: |
         docker pull ghcr.io/zaproxy/zaproxy:stable
-
         docker run --rm --network host \
+          -u 0 \
           -v $PWD/zap-reports:/zap/wrk \
           ghcr.io/zaproxy/zaproxy:stable \
           zap-baseline.py \
@@ -79,7 +79,6 @@ jobs:
           -r /zap/wrk/zap_report.html \
           -J /zap/wrk/zap_report.json \
           -l FAIL
-
         docker stop app
 
     # 🔟 Échouer la pipeline si ZAP trouve des vulnérabilités HIGH/CRITICAL
