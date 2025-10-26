@@ -21,15 +21,14 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
     - name: Run unit tests
-      run: |
-        python -m unittest test_app.py
+      run: python -m unittest discover -s tests -p "*.py"
 
     - name: Run SAST with Bandit
       run: |
-        pip install bandit
+        pip install bandit jq
         bandit -r . -f json -o bandit_report.json || true
         if jq '.results[] | select(.issue_severity == "HIGH" or .issue_severity == "CRITICAL")' bandit_report.json | grep -q .; then
           echo "Vulnérabilités critiques détectées ! Pipeline échoue."
@@ -52,13 +51,18 @@ jobs:
       run: |
         docker build -t mon-app .
         docker run -d -p 8000:8000 --name app mon-app
-        # Attendre que le serveur soit prêt (vérification de santé avec timeout accru)
+        # Vérifier que le serveur est prêt
         timeout 60 bash -c "until curl -s http://localhost:8000; do sleep 1; done" || echo "Server failed to start, check logs"
-        # Afficher les logs pour débogage
         docker logs app
 
     - name: Run DAST with OWASP ZAP
       run: |
-        docker pull owaspsecurity/zap || docker build -t owaspsecurity/zap:local zap-docker/
-        docker run --network host owaspsecurity/zap:local zap-baseline.py -t http://localhost:8000 -r zap_report.html -l FAIL
+        # Pull image officielle ZAP
+        docker pull owasp/zap2docker-stable
+        # Lancer le scan basique
+        docker run --network host owasp/zap2docker-stable zap-baseline.py \
+            -t http://localhost:8000 \
+            -r zap_report.html \
+            -l FAIL
+        # Stopper l'app
         docker stop app
