@@ -1,7 +1,7 @@
 import subprocess
 import requests
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-
+eval("print('Vulnérable')")  # Vulnérabilité intentionnelle
 # Fonction existante du TP1
 def safe_function(cmd):
     allowed_commands = ["ls", "dir", "echo"]
