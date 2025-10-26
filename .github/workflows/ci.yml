@@ -36,13 +36,17 @@ jobs:
           exit 1
         fi
 
-    - name: Run SCA with Snyk
+    - name: Setup Snyk
       uses: snyk/actions/setup@master
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
-        command: test
-        args: --severity-threshold=high --fail-on=upgradable
+        snyk-version: 'latest'
+
+    - name: Run SCA with Snyk
+      run: snyk test --severity-threshold=high --fail-on=upgradable
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
     - name: Deploy ephemeral environment
       run: |
