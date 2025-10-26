@@ -1,0 +1,10 @@
+# Dockerfile ZAP personnalisé
+FROM openjdk:11-jre-slim
+
+RUN apt-get update && apt-get install -y wget unzip && \
+    wget -q https://github.com/zaproxy/zaproxy/releases/download/v2.15.0/ZAP_2.15.0_Linux.tar.gz -O zap.tar.gz && \
+    tar -xzf zap.tar.gz -C /opt/ && rm zap.tar.gz && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/ZAP_2.15.0
+ENTRYPOINT ["./zap.sh"]
