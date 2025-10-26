@@ -37,8 +37,9 @@ jobs:
         fi
 
     - name: Run SCA with Snyk
+      uses: snyk/actions/setup@master
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      run: |
-        curl -sL https://raw.githubusercontent.com/snyk/snyk/master/scripts/install-snyk.sh | bash
-        snyk test --severity-threshold=high --fail-on=upgradable || true
+      with:
+        command: test
+        args: --severity-threshold=high --fail-on=upgradable
