@@ -43,3 +43,14 @@ jobs:
       with:
         command: test
         args: --severity-threshold=high --fail-on=upgradable
+
+    - name: Deploy ephemeral environment
+      run: |
+        docker build -t mon-app .
+        docker run -d -p 8000:8000 --name app mon-app
+
+    - name: Run DAST with OWASP ZAP
+      run: |
+        docker pull owasp/zap2docker-stable
+        docker run --network host owasp/zap2docker-stable zap-baseline.py -t http://localhost:8000 -r zap_report.html -l FAIL
+        docker stop app
