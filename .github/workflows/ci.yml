@@ -52,6 +52,8 @@ jobs:
       run: |
         docker build -t mon-app .
         docker run -d -p 8000:8000 --name app mon-app
+        # Attendre que le serveur soit prêt
+        sleep 10
 
     - name: Run DAST with OWASP ZAP
       run: |
